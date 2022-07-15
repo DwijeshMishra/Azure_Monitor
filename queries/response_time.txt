@@ -1,0 +1,17 @@
+<<-QUERY
+let startTimestamp = ago(1h);
+KubePodInventory
+| where TimeGenerated > startTimestamp
+| project ContainerID, PodName=Name, PodLabel, PodLabelJson=parsejson(PodLabel)
+| where PodLabelJson[0]["app.kubernetes.io/managed-by"] == "Helm"
+| distinct ContainerID, PodName, PodLabel
+| join
+    (
+    ContainerLog
+    | where TimeGenerated > startTimestamp 
+    )
+    on ContainerID
+| project TimeGenerated, PodName, LogEntry, LogEntrySource, PodLabel
+| order by TimeGenerated desc
+| where LogEntry contains "timeout"
+  QUERY
